@@ -19,6 +19,18 @@ This system explores the following agentic AI patterns:
 
 ---
 
+## Run locally
+
+```bash
+python -m venv .venv
+# Windows:
+.\.venv\Scripts\activate
+
+pip install -r requirements.txt
+python app.py
+```
+---
+
 ## Architecture Overview
 
 The system is composed of multiple independent agents orchestrated via **LangGraph**:
