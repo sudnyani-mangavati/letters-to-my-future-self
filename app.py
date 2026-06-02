@@ -3,14 +3,38 @@ import json
 import os
 import re
 import datetime as dt
+from zoneinfo import ZoneInfo
 from letters_project.orchestrator import Orchestrator
 from letters_project.scheduler import Scheduler
 
 st.set_page_config(page_title="Letters to My Future Self", page_icon="✉️", layout="wide")
 
+# Common timezones for the dropdown
+TIMEZONES = [
+    "US/Eastern",
+    "US/Central",
+    "US/Mountain",
+    "US/Pacific",
+    "US/Hawaii",
+    "Europe/London",
+    "Europe/Paris",
+    "Europe/Berlin",
+    "Asia/Kolkata",
+    "Asia/Tokyo",
+    "Asia/Shanghai",
+    "Asia/Dubai",
+    "Australia/Sydney",
+    "Pacific/Auckland",
+    "UTC",
+]
+
 @st.cache_resource
 def get_orchestrator() -> Orchestrator:
-    return Orchestrator()
+    # Streamlit Cloud has a read-only source directory;
+    # use /tmp for the database so writes succeed.
+    import tempfile
+    db_path = os.path.join(tempfile.gettempdir(), "letters.db")
+    return Orchestrator(db_path=db_path)
 
 @st.cache_resource
 def get_scheduler(_orch: Orchestrator) -> Scheduler:
@@ -34,6 +58,16 @@ def main() -> None:
         if not user_email:
             st.info("Enter your email to see your letters.")
 
+        st.markdown("### 🕐 Timezone")
+        user_tz_name = st.selectbox(
+            "Your timezone",
+            TIMEZONES,
+            index=TIMEZONES.index("US/Central"),
+            help="Times are shown and saved in your selected timezone.",
+            label_visibility="collapsed",
+        )
+        user_tz = ZoneInfo(user_tz_name)
+
         st.markdown("---")
         if scheduler.running:
             st.caption("🟢 Scheduler active — checking for deliveries every 30s")
@@ -51,7 +85,7 @@ def main() -> None:
         st.caption("When should this letter be delivered?")
         col1, col2 = st.columns(2)
 
-        now = dt.datetime.now()
+        now = dt.datetime.now(user_tz)
 
         # Calculate next valid 15-min slot (only once, so it won't reset user edits)
         if "init_release_time_str" not in st.session_state:
@@ -105,7 +139,8 @@ def main() -> None:
         # Combine date + time and check if it's in the past
         release_dt = None
         if release_date and release_time and validation_message is None:
-            release_dt = dt.datetime.combine(release_date, release_time)
+            # Attach user's timezone so comparison with now (tz-aware) works
+            release_dt = dt.datetime.combine(release_date, release_time, tzinfo=user_tz)
             if release_dt <= now:
                 validation_message = "The selected date and time is in the past. Please pick a future time."
 
@@ -129,7 +164,9 @@ def main() -> None:
         )
 
         if st.button("Create", type="primary", disabled=not can_create):
-            date_iso = release_dt.strftime("%Y-%m-%dT%H:%M:%S")
+            # Convert to UTC for storage (ChronoAgent compares against UTC)
+            release_utc = release_dt.astimezone(ZoneInfo("UTC"))
+            date_iso = release_utc.strftime("%Y-%m-%dT%H:%M:%S")
             letter_id = orch.create_letter(
                 content.strip(),
                 date_iso,
@@ -137,7 +174,7 @@ def main() -> None:
             )
             st.success(
                 f"Letter **#{letter_id}** created! It will be delivered to "
-                f"**{email_raw}** on **{release_dt.strftime('%b %d, %Y at %I:%M %p')}**."
+                f"**{email_raw}** on **{release_dt.strftime('%b %d, %Y at %I:%M %p')} ({user_tz_name})**."
             )
     
 
