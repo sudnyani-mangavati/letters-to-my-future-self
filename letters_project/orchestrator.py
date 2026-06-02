@@ -27,19 +27,28 @@ from .agents.archivist_agent import ArchivistAgent
 class Orchestrator:
     """Coordinates agents and exposes a high‑level API."""
 
-    def __init__(self, db_path: Optional[str] = None, mock_email: bool = True) -> None:
+    def __init__(self, db_path: Optional[str] = None, mock_email: Optional[bool] = None) -> None:
         # Initialise persistence and event bus
         self.db = Database(db_path=db_path)
         self.bus = EventBus(self.db)
         # Configure tools
         self.llm = LLMProvider()
         self.encryption_tool = EncryptionTool()
-        # Choose an email provider. Use a mock provider unless
-        # explicitly disabled.
-        if mock_email:
+        # Choose an email provider.
+        # - mock_email=True  → always mock
+        # - mock_email=False → always real (EmailTool picks SMTP from env)
+        # - mock_email=None  → auto-detect: use real if SMTP env vars exist
+        import os
+        if mock_email is True:
             email_tool = EmailTool(provider=MockEmailProvider())
-        else:
+        elif mock_email is False:
             email_tool = EmailTool()
+        else:
+            # Auto-detect: if SMTP creds are configured, use real email
+            if os.environ.get("SMTP_HOST") and os.environ.get("SMTP_PORT"):
+                email_tool = EmailTool()
+            else:
+                email_tool = EmailTool(provider=MockEmailProvider())
         self.email_tool = email_tool
         # Instantiate agents
         self.agents = [

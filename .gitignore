@@ -12,3 +12,7 @@ __pycache__/
 
 # OS junk
 .DS_Store
+
+# Project data (not for git)
+letters_project/memory/letters.db
+mock_emails.jsonl
