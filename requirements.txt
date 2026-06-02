@@ -1,3 +1,5 @@
 pytest
 python-dotenv
 cryptography
+streamlit
+tzdata
