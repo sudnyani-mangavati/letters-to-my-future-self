@@ -62,11 +62,8 @@ def main() -> None:
             auth_configured = False
 
         if auth_configured:
-            # OAuth is set up but user hasn't logged in yet
-            st.title("✉️ Letters to My Future Self")
-            st.info("Please sign in with Google to continue.")
-            if st.button("🔐 Sign in with Google", type="primary"):
-                st.login("google")
+            # OAuth is set up but user hasn't logged in — redirect immediately
+            st.login("google")
             st.stop()
 
     # --- Sidebar ---
