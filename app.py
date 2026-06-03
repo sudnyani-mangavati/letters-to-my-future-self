@@ -55,15 +55,17 @@ def main() -> None:
         is_logged_in = False
 
     if not is_logged_in:
-        # Check if auth is configured by trying to detect secrets
+        # Check if auth is configured
         try:
             auth_configured = bool(st.secrets.get("auth"))
         except Exception:
             auth_configured = False
 
         if auth_configured:
-            # OAuth is set up but user hasn't logged in — redirect immediately
-            st.login("google")
+            st.title("✉️ Letters to My Future Self")
+            st.info("Sign in with Google to access your letters.")
+            if st.button("🔐 Sign in with Google", type="primary"):
+                st.login("google")
             st.stop()
 
     # --- Sidebar ---
