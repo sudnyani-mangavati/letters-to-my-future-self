@@ -46,17 +46,45 @@ def main() -> None:
     orch = get_orchestrator()
     scheduler = get_scheduler(orch)
 
-    # --- Sidebar: user identity for filtering ---
+    # --- Authentication ---
+    # On Streamlit Cloud with OAuth configured: use Google login
+    # Locally without OAuth: fall back to manual email input
+    is_logged_in = st.experimental_user.get("is_logged_in", False)
+
+    if not is_logged_in:
+        # Check if auth is configured by trying to detect secrets
+        try:
+            auth_configured = bool(st.secrets.get("auth"))
+        except Exception:
+            auth_configured = False
+
+        if auth_configured:
+            # OAuth is set up but user hasn't logged in yet
+            st.title("✉️ Letters to My Future Self")
+            st.info("Please sign in with Google to continue.")
+            if st.button("🔐 Sign in with Google", type="primary"):
+                st.login("google")
+            st.stop()
+
+    # --- Sidebar ---
     with st.sidebar:
-        st.markdown("### 👤 Your identity")
-        user_email = st.text_input(
-            "Your email",
-            value="",
-            placeholder="you@example.com",
-            help="Letters and sent emails are filtered to this address.",
-        ).strip().lower()
-        if not user_email:
-            st.info("Enter your email to see your letters.")
+        if is_logged_in:
+            user_email = st.experimental_user.email.strip().lower()
+            st.markdown(f"### 👤 {st.experimental_user.get('name', user_email)}")
+            st.caption(user_email)
+            if st.button("Log out"):
+                st.logout()
+        else:
+            # Local dev fallback — manual email input
+            st.markdown("### 👤 Your identity")
+            user_email = st.text_input(
+                "Your email",
+                value="",
+                placeholder="you@example.com",
+                help="Letters and sent emails are filtered to this address.",
+            ).strip().lower()
+            if not user_email:
+                st.info("Enter your email to see your letters.")
 
         st.markdown("### 🕐 Timezone")
         user_tz_name = st.selectbox(
