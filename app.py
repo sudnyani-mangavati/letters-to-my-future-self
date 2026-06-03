@@ -49,7 +49,10 @@ def main() -> None:
     # --- Authentication ---
     # On Streamlit Cloud with OAuth configured: use Google login
     # Locally without OAuth: fall back to manual email input
-    is_logged_in = st.experimental_user.get("is_logged_in", False)
+    try:
+        is_logged_in = st.experimental_user.is_logged_in
+    except AttributeError:
+        is_logged_in = False
 
     if not is_logged_in:
         # Check if auth is configured by trying to detect secrets
@@ -70,7 +73,7 @@ def main() -> None:
     with st.sidebar:
         if is_logged_in:
             user_email = st.experimental_user.email.strip().lower()
-            st.markdown(f"### 👤 {st.experimental_user.get('name', user_email)}")
+            st.markdown(f"### 👤 {getattr(st.experimental_user, 'name', user_email)}")
             st.caption(user_email)
             if st.button("Log out"):
                 st.logout()
