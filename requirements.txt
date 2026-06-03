@@ -1,6 +1,5 @@
 pytest
 python-dotenv
 cryptography
-streamlit
+streamlit[auth]
 tzdata
-authlib
